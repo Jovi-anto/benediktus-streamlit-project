@@ -7,6 +7,7 @@ from pymongo import MongoClient
 import certifi
 import dns.resolver
 
+# Memaksa resolver DNS Google agar aman dari timeout jaringan
 dns.resolver.default_resolver = dns.resolver.Resolver(configure=False)
 dns.resolver.default_resolver.nameservers = ['8.8.8.8', '8.8.4.4']
 
@@ -206,7 +207,6 @@ with tab2:
 
 with tab3:
     st.subheader("Database MongoDB Atlas & Retraining")
-    # Mengembalikan ke URI cluster awal Anda
     mongo_uri = st.text_input("MongoDB Atlas URI", type="password", value="mongodb+srv://672022138student:benediktus2003@cluster0.7u0hm.mongodb.net/?retryWrites=true&w=majority&tls=true")
     db_name = st.text_input("Database Name", value="ml_app_db")
     collection_name = st.text_input("Collection Name", value="model_logs")
@@ -218,7 +218,12 @@ with tab3:
                 st.warning("Latih model terlebih dahulu.")
             else:
                 try:
-                    client = MongoClient(mongo_uri, tlsCAFile=certifi.where(), tlsAllowInvalidCertificates=True)
+                    client = MongoClient(
+                        mongo_uri, 
+                        tls=True, 
+                        tlsAllowInvalidCertificates=True, 
+                        tlsCAFile=certifi.where()
+                    )
                     db = client[db_name]
                     collection = db[collection_name]
                     log_data = {
@@ -237,7 +242,12 @@ with tab3:
     with col_d2:
         if st.button("🔄 Ambil & Retrain dari MongoDB"):
             try:
-                client = MongoClient(mongo_uri, tlsCAFile=certifi.where(), tlsAllowInvalidCertificates=True)
+                client = MongoClient(
+                    mongo_uri, 
+                    tls=True, 
+                    tlsAllowInvalidCertificates=True, 
+                    tlsCAFile=certifi.where()
+                )
                 db = client[db_name]
                 collection = db[collection_name]
                 last_log = collection.find_one(sort=[('_id', -1)])
@@ -263,7 +273,12 @@ with tab4:
         if submit_comment:
             if nama and komentar:
                 try:
-                    client = MongoClient(mongo_uri, tlsCAFile=certifi.where(), tlsAllowInvalidCertificates=True)
+                    client = MongoClient(
+                        mongo_uri, 
+                        tls=True, 
+                        tlsAllowInvalidCertificates=True, 
+                        tlsCAFile=certifi.where()
+                    )
                     db = client[db_name]
                     comments_col = db["public_comments"]
                     comments_col.insert_one({"nama": nama, "komentar": komentar})
@@ -277,7 +292,12 @@ with tab4:
     st.markdown("---")
     st.subheader("📋 Daftar Komentar Publik")
     try:
-        client = MongoClient(mongo_uri, tlsCAFile=certifi.where(), tlsAllowInvalidCertificates=True)
+        client = MongoClient(
+            mongo_uri, 
+            tls=True, 
+            tlsAllowInvalidCertificates=True, 
+            tlsCAFile=certifi.where()
+        )
         db = client[db_name]
         comments_col = db["public_comments"]
         all_comments = list(comments_col.find({}, {"_id": 0, "nama": 1, "komentar": 1}))
