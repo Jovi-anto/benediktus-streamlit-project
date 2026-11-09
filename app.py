@@ -6,7 +6,6 @@ import seaborn as sns
 from pymongo import MongoClient
 import certifi
 import dns.resolver
-import ssl
 
 # Memaksa resolver DNS Google agar aman dari timeout jaringan
 dns.resolver.default_resolver = dns.resolver.Resolver(configure=False)
@@ -208,7 +207,7 @@ with tab2:
 
 with tab3:
     st.subheader("Database MongoDB Atlas & Retraining")
-    mongo_uri = st.text_input("MongoDB Atlas URI", type="password", value="mongodb+srv://672022138student:benediktus2003@cluster0.7u0hm.mongodb.net/?retryWrites=true&w=majority&tls=true")
+    mongo_uri = st.text_input("MongoDB Atlas URI", type="password", value="mongodb+srv://672022138student:benediktus2003@cluster0.7u0hm.mongodb.net/?retryWrites=true&w=majority")
     db_name = st.text_input("Database Name", value="ml_app_db")
     collection_name = st.text_input("Collection Name", value="model_logs")
     
@@ -223,7 +222,7 @@ with tab3:
                         mongo_uri, 
                         tls=True, 
                         tlsAllowInvalidCertificates=True,
-                        ssl_cert_reqs=ssl.CERT_NONE
+                        tlsCAFile=certifi.where()
                     )
                     db = client[db_name]
                     collection = db[collection_name]
@@ -247,7 +246,7 @@ with tab3:
                     mongo_uri, 
                     tls=True, 
                     tlsAllowInvalidCertificates=True,
-                    ssl_cert_reqs=ssl.CERT_NONE
+                    tlsCAFile=certifi.where()
                 )
                 db = client[db_name]
                 collection = db[collection_name]
@@ -278,7 +277,7 @@ with tab4:
                         mongo_uri, 
                         tls=True, 
                         tlsAllowInvalidCertificates=True,
-                        ssl_cert_reqs=ssl.CERT_NONE
+                        tlsCAFile=certifi.where()
                     )
                     db = client[db_name]
                     comments_col = db["public_comments"]
@@ -297,7 +296,7 @@ with tab4:
             mongo_uri, 
             tls=True, 
             tlsAllowInvalidCertificates=True,
-            ssl_cert_reqs=ssl.CERT_NONE
+            tlsCAFile=certifi.where()
         )
         db = client[db_name]
         comments_col = db["public_comments"]
