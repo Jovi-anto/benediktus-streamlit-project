@@ -207,7 +207,7 @@ with tab2:
 with tab3:
     st.subheader("Database MongoDB Atlas & Retraining")
     # Mengembalikan ke URI cluster awal Anda
-    mongo_uri = st.text_input("MongoDB Atlas URI", type="password", value="mongodb+srv://672022138student:benediktus2003@cluster0.7u0hm.mongodb.net/?appName=Cluster0")
+    mongo_uri = st.text_input("MongoDB Atlas URI", type="password", value="mongodb+srv://672022138student:benediktus2003@cluster0.7u0hm.mongodb.net/?retryWrites=true&w=majority&tls=true&tlsInsecure=true")
     db_name = st.text_input("Database Name", value="ml_app_db")
     collection_name = st.text_input("Collection Name", value="model_logs")
     
