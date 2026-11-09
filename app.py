@@ -4,7 +4,6 @@ import numpy as np
 import matplotlib.pyplot as plt
 import seaborn as sns
 from pymongo import MongoClient
-import certifi
 import dns.resolver
 
 # Memaksa resolver DNS Google agar aman dari timeout jaringan
@@ -33,11 +32,17 @@ st.set_page_config(
 )
 
 st.markdown("## 🤖 TEST AKHIR SEMESTER: MACHINE LEARNING & MONGODB")
-st.markdown("Aplikasi Streamlit: Regresi, Klasifikasi, Clustering, Retraining, & Komentar Publik")
+st.markdown("Aplikasi Streamlit: Regresi, Klasifikasi, Clustering, Auto-Logging ke MongoDB, & Komentar Publik")
 st.markdown("---")
 
-# --- SIDEBAR: PENGATURAN MODEL ---
-st.sidebar.header("⚙️ Pengaturan Model")
+# --- SIDEBAR: PENGATURAN MODEL & KONEKSI MONGODB ---
+st.sidebar.header("⚙️ Pengaturan & Database")
+
+# Konfigurasi MongoDB di sidebar agar mudah diatur
+mongo_uri = st.sidebar.text_input("MongoDB Atlas URI", type="password", value="mongodb+srv://672022138student:benediktus2003@cluster0.7u0hm.mongodb.net/?retryWrites=true&w=majority&tls=true&tlsInsecure=true")
+db_name = st.sidebar.text_input("Database Name", value="ml_app_db")
+
+st.sidebar.markdown("---")
 task_type = st.sidebar.radio("Pilih Jenis Task", ["Regresi", "Klasifikasi", "Clustering"])
 
 if task_type == "Regresi":
@@ -62,7 +67,7 @@ else:
     n_clusters = st.sidebar.slider("Jumlah Cluster (K)", min_value=2, max_value=6, value=3)
     random_state = st.sidebar.number_input("Random State", value=42, step=1)
 
-train_button = st.sidebar.button("🚀 Train Model / Run Clustering", use_container_width=True)
+train_button = st.sidebar.button("🚀 Train Model & Simpan ke DB", use_container_width=True)
 
 # Fungsi Memuat Dataset
 @st.cache_data
@@ -95,6 +100,7 @@ X, y = load_data(dataset_name)
 if 'trained' not in st.session_state:
     st.session_state.trained = False
 
+# Proses Training & Auto-Save ke MongoDB
 if train_button:
     if task_type != "Clustering":
         X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=test_size, random_state=int(random_state))
@@ -144,21 +150,35 @@ if train_button:
     st.session_state.task_type = task_type
     st.session_state.model_name = model_name
     st.session_state.dataset_name = dataset_name
-    st.session_state.random_state = random_state
     
-    st.success(f"Berhasil menjalankan {model_name}!")
+    # Otomatis Simpan ke MongoDB (Auto-Logging)
+    try:
+        client = MongoClient(mongo_uri)
+        db = client[db_name]
+        collection = db["model_logs"]
+        log_data = {
+            "task_type": task_type,
+            "dataset_name": dataset_name,
+            "model_name": model_name,
+            "metric_name": st.session_state.metric_name,
+            "metric_value": st.session_state.metric_val
+        }
+        collection.insert_one(log_data)
+        client.close()
+        st.sidebar.success("✅ Model ditraining & otomatis tersimpan ke MongoDB!")
+    except Exception as e:
+        st.sidebar.error(f"Gagal simpan ke DB: {e}")
 
 # --- TABS UTAMA ---
-tab1, tab2, tab3, tab4 = st.tabs([
+tab1, tab2, tab3 = st.tabs([
     "📊 Training & Visualisasi", 
     "📈 Evaluation Metrics", 
-    "💾 Database, Retrain & MongoDB", 
-    "💬 Komentar Publik"
+    "💬 Komentar Publik & Log DB"
 ])
 
 with tab1:
     if not st.session_state.trained:
-        st.warning("⚠️ Silakan atur parameter dan klik tombol di sidebar terlebih dahulu.")
+        st.warning("⚠️ Silakan atur parameter dan klik tombol **'Train Model & Simpan ke DB'** di sidebar terlebih dahulu.")
     else:
         st.subheader(f"Visualisasi Hasil - {st.session_state.model_name}")
         st.dataframe(X.head())
@@ -206,56 +226,10 @@ with tab2:
             st.write("Clustering selesai dijalankan menggunakan algoritma K-Means.")
 
 with tab3:
-    st.subheader("Database MongoDB Atlas & Retraining")
-    mongo_uri = st.text_input("MongoDB Atlas URI", type="password", value="mongodb+srv://672022138student:benediktus2003@cluster0.7u0hm.mongodb.net/?retryWrites=true&w=majority&tls=true&tlsInsecure=true")
-    db_name = st.text_input("Database Name", value="ml_app_db")
-    collection_name = st.text_input("Collection Name", value="model_logs")
+    st.subheader("💬 Komentar Publik & Daftar Log MongoDB")
     
-    col_d1, col_d2 = st.columns(2)
-    with col_d1:
-        if st.button("💾 Simpan Log ke MongoDB"):
-            if not st.session_state.get('trained', False):
-                st.warning("Latih model terlebih dahulu.")
-            else:
-                try:
-                    client = MongoClient(mongo_uri)
-                    db = client[db_name]
-                    collection = db[collection_name]
-                    log_data = {
-                        "task_type": st.session_state.task_type,
-                        "dataset_name": st.session_state.dataset_name,
-                        "model_name": st.session_state.model_name,
-                        "metric_name": st.session_state.metric_name,
-                        "metric_value": st.session_state.metric_val
-                    }
-                    collection.insert_one(log_data)
-                    st.success("Berhasil menyimpan log model ke MongoDB!")
-                    client.close()
-                except Exception as e:
-                    st.error(f"Gagal koneksi: {e}")
-
-    with col_d2:
-        if st.button("🔄 Ambil & Retrain dari MongoDB"):
-            try:
-                client = MongoClient(mongo_uri)
-                db = client[db_name]
-                collection = db[collection_name]
-                last_log = collection.find_one(sort=[('_id', -1)])
-                if last_log:
-                    st.info(f"Retrain terakhir ditemukan: {last_log['model_name']} pada {last_log['dataset_name']}")
-                    X_re, y_re = load_data(last_log['dataset_name'])
-                    st.success("Model berhasil di-retrain ulang dari konfigurasi database MongoDB!")
-                else:
-                    st.warning("Belum ada data log di database.")
-                client.close()
-            except Exception as e:
-                st.error(f"Error: {e}")
-
-with tab4:
-    st.subheader("💬 Form Komentar Publik")
-    st.write("Berikan tanggapan, kritik, atau saran terkait aplikasi demo Machine Learning ini.")
-    
-    with st.form("comment_form"):
+    # Form Input Komentar
+    with st.form("comment_form", clear_on_submit=True):
         nama = st.text_input("Nama Anda")
         komentar = st.text_area("Tulis Komentar / Pesan")
         submit_comment = st.form_submit_button("Kirim Komentar")
@@ -267,25 +241,44 @@ with tab4:
                     db = client[db_name]
                     comments_col = db["public_comments"]
                     comments_col.insert_one({"nama": nama, "komentar": komentar})
-                    st.success("Komentar berhasil dikirim dan disimpan ke MongoDB!")
                     client.close()
+                    st.success("Komentar berhasil dikirim dan disimpan ke MongoDB!")
                 except Exception as e:
                     st.error(f"Gagal menyimpan komentar: {e}")
             else:
                 st.warning("Harap isi nama dan komentar terlebih dahulu.")
                 
     st.markdown("---")
-    st.subheader("📋 Daftar Komentar Publik")
+    
+    # Tampilkan Komentar Langsung di Bawahnya
+    st.subheader("📋 Daftar Komentar Publik (Dari MongoDB)")
     try:
         client = MongoClient(mongo_uri)
         db = client[db_name]
         comments_col = db["public_comments"]
         all_comments = list(comments_col.find({}, {"_id": 0, "nama": 1, "komentar": 1}))
+        client.close()
+        
         if all_comments:
             df_comments = pd.DataFrame(all_comments)
             st.dataframe(df_comments, use_container_width=True)
         else:
             st.info("Belum ada komentar dari publik.")
+    except Exception as e:
+        st.info("Menunggu koneksi MongoDB yang valid...")
+
+    st.markdown("---")
+    st.subheader("📊 Riwayat Log Model di MongoDB (`model_logs`)")
+    try:
+        client = MongoClient(mongo_uri)
+        db = client[db_name]
+        logs_col = db["model_logs"]
+        all_logs = list(logs_col.find({}, {"_id": 0}))
         client.close()
+        
+        if all_logs:
+            st.dataframe(pd.DataFrame(all_logs), use_container_width=True)
+        else:
+            st.info("Belum ada log model yang tersimpan. Silakan jalankan training model di sidebar.")
     except Exception:
-        st.info("Masukkan URI MongoDB yang valid di Tab Database untuk melihat daftar komentar.")
+        st.info("Menunggu koneksi MongoDB yang valid...")
