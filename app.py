@@ -207,7 +207,7 @@ with tab2:
 
 with tab3:
     st.subheader("Database MongoDB Atlas & Retraining")
-    mongo_uri = st.text_input("MongoDB Atlas URI", type="password", value="mongodb+srv://672022138student:benediktus2003@cluster0.7u0hm.mongodb.net/?retryWrites=true&w=majority&tls=true")
+    mongo_uri = st.text_input("MongoDB Atlas URI", type="password", value="mongodb://672022138student:benediktus2003@cluster0-shard-00-00.7u0hm.mongodb.net:27017,cluster0-shard-00-01.7u0hm.mongodb.net:27017,cluster0-shard-00-02.7u0hm.mongodb.net:27017/?replicaSet=atlas-7u0hm-shard-0&ssl=true&authSource=admin&tlsAllowInvalidCertificates=true")
     db_name = st.text_input("Database Name", value="ml_app_db")
     collection_name = st.text_input("Collection Name", value="model_logs")
     
